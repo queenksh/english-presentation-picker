@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High School English Presentation Picker 🎤</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS (XLSX) for Excel parsing and exporting -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Canvas Confetti for victory celebration -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Fredoka & Gowun Dodum for friendly English UI -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Fredoka', 'Gowun Dodum', sans-serif;
+            background-color: #f0fdf4;
+            background-image: radial-gradient(#dcfce7 1.5px, transparent 1.5px), radial-gradient(#dcfce7 1.5px, #f0fdf4 1.5px);
+            background-size: 60px 60px;
+            background-position: 0 0, 30px 30px;
+        }
+        .card-bounce {
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .card-bounce:hover {
+            transform: translateY(-4px) scale(1.02);
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .animate-pulse-ring {
+            animation: pulse-ring 2s infinite ease-in-out;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 pb-12 flex flex-col">
+
+    <!-- Header Banner -->
+    <header class="w-full bg-emerald-500 text-white shadow-md py-4 px-6 mb-6">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-yellow-300 text-emerald-800 rounded-2xl flex items-center justify-center text-2xl font-bold shadow-inner">
+                    🎤
+                </div>
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-bold tracking-wide flex items-center gap-2">
+                        High School English Presentation Picker
+                        <span class="text-xs bg-yellow-300 text-emerald-900 font-bold px-2 py-0.5 rounded-full shadow-sm">Grade 11</span>
+                    </h1>
+                    <p class="text-emerald-100 text-xs sm:text-sm">Easily import your roster from Excel and decide presentation orders in a fun and fair way!</p>
+                </div>
+            </div>
+            <!-- Top Audio Controls -->
+            <div class="flex items-center gap-2">
+                <button onclick="playTestSound()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2 rounded-xl transition flex items-center gap-1 shadow-sm">
+                    <i class="fa-solid fa-volume-high"></i> Sound Test
+                </button>
+                <button onclick="toggleSound()" id="soundToggleBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2 rounded-xl transition flex items-center gap-1 shadow-sm">
+                    <i class="fa-solid fa-volume-xmark" id="soundIcon"></i> <span id="soundText">Unmute</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-6xl mx-auto px-4 w-full flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Panel: Roster Management & Settings (5 cols) -->
+        <section class="lg:col-span-5 flex flex-col gap-5">
+            <!-- Roster Card -->
+            <div class="glass-panel rounded-3xl p-5 shadow-lg border border-emerald-100">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-emerald-800 flex items-center gap-2">
+                        <i class="fa-solid fa-users text-emerald-600"></i> Student Roster
+                    </h2>
+                    <span id="studentCountBadge" class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-1 rounded-full">
+                        Total: <span id="studentCount">0</span>
+                    </span>
+                </div>
+
+                <!-- Excel Upload Zone -->
+                <div class="mb-4">
+                    <label for="excelFile" class="flex flex-col items-center justify-center w-full h-32 border-2 border-emerald-300 border-dashed rounded-2xl cursor-pointer bg-emerald-50/50 hover:bg-emerald-100/50 transition group">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6 text-center px-2">
+                            <i class="fa-solid fa-file-excel text-3xl text-emerald-500 mb-2 group-hover:scale-110 transition"></i>
+                            <p class="mb-1 text-sm text-emerald-900 font-bold">Upload Excel (.xlsx) / CSV File</p>
+                            <p class="text-xs text-slate-500">Click or drag & drop file here</p>
+                        </div>
+                        <input id="excelFile" type="file" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleFileUpload(event)" />
+                    </label>
+                </div>
+
+                <!-- Quick Action Buttons -->
+                <div class="grid grid-cols-2 gap-2 mb-4">
+                    <button onclick="loadSampleData()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs py-2.5 px-3 rounded-xl font-bold transition flex items-center justify-center gap-1.5 border border-amber-200 shadow-sm">
+                        <i class="fa-solid fa-wand-magic-sparkles text-amber-600"></i> Sample Roster (25)
+                    </button>
+                    <button onclick="clearRoster()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs py-2.5 px-3 rounded-xl font-bold transition flex items-center justify-center gap-1.5 border border-slate-200">
+                        <i class="fa-solid fa-trash-can text-slate-500"></i> Reset Roster
+                    </button>
+                </div>
+
+                <!-- Manual Input Section -->
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label class="text-xs font-bold text-slate-600">Manual Input / Copy & Paste</label>
+                        <span class="text-[11px] text-slate-400">One per line (e.g. 1. Alex Kang)</span>
+                    </div>
+                    <textarea id="manualRosterInput" rows="6" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-400 focus:outline-none resize-none font-mono" placeholder="1. Alex Kang&#10;2. Chloe Kim&#10;3. David Park&#10;..."></textarea>
+                    <button onclick="applyManualRoster()" class="mt-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-xl transition shadow-sm flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-check"></i> Apply Roster
+                    </button>
+                </div>
+            </div>
+
+            <!-- Settings Card -->
+            <div class="glass-panel rounded-3xl p-5 shadow-lg border border-emerald-100">
+                <h3 class="text-base font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-emerald-600"></i> Presentation Settings
+                </h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Daily Presentation Groups (Optional)</label>
+                        <select id="splitGroupSize" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-emerald-400 focus:outline-none font-bold">
+                            <option value="0">No Split (Single overall list)</option>
+                            <option value="5">5 Students per day</option>
+                            <option value="6">6 Students per day</option>
+                            <option value="7">7 Students per day</option>
+                            <option value="8">8 Students per day</option>
+                            <option value="9">9 Students per day</option>
+                            <option value="10" selected>10 Students per day (Day 1, Day 2...)</option>
+                            <option value="11">11 Students per day</option>
+                            <option value="12">12 Students per day</option>
+                            <option value="13">13 Students per day</option>
+                            <option value="14">14 Students per day</option>
+                            <option value="15">15 Students per day</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel: Draw Hub & Results Area (7 cols) -->
+        <section class="lg:col-span-7 flex flex-col gap-5">
+            
+            <!-- Action Hub Box -->
+            <div class="glass-panel rounded-3xl p-6 shadow-lg border border-emerald-100 text-center relative overflow-hidden">
+                <!-- Background decoration -->
+                <div class="absolute -right-8 -bottom-8 opacity-10 text-emerald-800 text-9xl pointer-events-none">
+                    <i class="fa-solid fa-dice"></i>
+                </div>
+
+                <div class="max-w-md mx-auto">
+                    <div class="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold mb-3">
+                        🎯 Grade 11 English Class
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">
+                        Ready to Pick Presentation Orders?
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-500 mb-6">
+                        Upload your roster or use the sample, then click a button to draw!
+                    </p>
+
+                    <!-- Main Shuffle Buttons -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                        <!-- Instant All Shuffle -->
+                        <button onclick="startFullShuffle()" id="fullShuffleBtn" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white p-4 rounded-2xl shadow-lg transition transform active:scale-95 flex flex-col items-center justify-center border-b-4 border-teal-800">
+                            <i class="fa-solid fa-shuffle text-2xl mb-1"></i>
+                            <span class="font-bold text-lg">Full Shuffle</span>
+                            <span class="text-[11px] opacity-80">Instant order for all students!</span>
+                        </button>
+
+                        <!-- Interactive Sequential Pick -->
+                        <button onclick="startSequentialPick()" id="seqPickBtn" class="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white p-4 rounded-2xl shadow-lg transition transform active:scale-95 flex flex-col items-center justify-center border-b-4 border-orange-700">
+                            <i class="fa-solid fa-gift text-2xl mb-1"></i>
+                            <span class="font-bold text-lg">One-by-One Pick</span>
+                            <span class="text-[11px] opacity-80">Exciting live draw for class!</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Draw Stage Area (Hidden when not picking sequentially) -->
+            <div id="drawStageArea" class="hidden glass-panel rounded-3xl p-6 shadow-xl border-2 border-amber-300 bg-amber-50/60 text-center relative">
+                <div class="text-xs font-bold text-amber-700 uppercase tracking-widest mb-1">Current Presenter Draw</div>
+                <h3 class="text-lg font-bold text-amber-900 mb-4" id="drawStageTitle">Drawing Presenter #1...</h3>
+
+                <!-- Slot Machine Display Box -->
+                <div class="w-full max-w-sm mx-auto h-28 bg-slate-900 border-4 border-amber-400 rounded-2xl shadow-inner flex items-center justify-center relative overflow-hidden my-2">
+                    <div id="slotDisplayText" class="font-bold text-3xl sm:text-4xl text-yellow-300 transition-all tracking-wider">
+                        ??
+                    </div>
+                </div>
+
+                <!-- Interactive Step Controls -->
+                <div class="mt-4 flex justify-center gap-3">
+                    <button id="drawNextPickBtn" onclick="drawNextStudent()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold text-base px-6 py-2.5 rounded-xl shadow-md transition flex items-center gap-2">
+                        <i class="fa-solid fa-dice-five"></i> Pick Next Presenter!
+                    </button>
+                    <button onclick="stopSequentialPick()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl transition">
+                        Finish Draw
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Container Card -->
+            <div class="glass-panel rounded-3xl p-5 shadow-lg border border-emerald-100 flex-grow flex flex-col">
+                <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4 pb-3 border-b border-slate-200">
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-list-ol text-emerald-600"></i> Presentation Order Results
+                        </h3>
+                        <p class="text-xs text-slate-500">Fair and randomly assigned English presentation schedule.</p>
+                    </div>
+
+                    <!-- Action toolbar for results -->
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button onclick="toggleClassroomMode()" class="bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold px-3 py-2 rounded-xl transition shadow-sm flex items-center gap-1.5">
+                            <i class="fa-solid fa-tv"></i> Big Screen Display
+                        </button>
+                        <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition shadow-sm flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-arrow-down"></i> Export to Excel
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Result Cards List Grid -->
+                <div id="resultContainer" class="flex-grow min-h-[300px] max-h-[500px] overflow-y-auto pr-1">
+                    <!-- Empty state notice -->
+                    <div id="emptyResultNotice" class="h-full flex flex-col items-center justify-center text-center p-8 text-slate-400">
+                        <i class="fa-regular fa-face-smile-wink text-5xl mb-3 text-emerald-300"></i>
+                        <p class="font-bold text-lg text-slate-600">No Presentation Orders Yet!</p>
+                        <p class="text-xs">Click [Full Shuffle] or [One-by-One Pick] above to start drawing.</p>
+                    </div>
+
+                    <!-- Dynamic Cards Grid inserted by JS -->
+                    <div id="resultGrid" class="hidden grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"></div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Classroom Big TV Presentation Overlay Modal -->
+    <div id="classroomModal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-50 hidden flex-col p-6 overflow-y-auto">
+        <div class="max-w-6xl mx-auto w-full flex justify-between items-center mb-6 pb-4 border-b border-slate-800">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl">🎤</span>
+                <div>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-white">High School English Presentation Schedule</h2>
+                    <p class="text-emerald-400 text-xs sm:text-sm">Grade 11 English Presentation Order</p>
+                </div>
+            </div>
+            <button onclick="toggleClassroomMode()" class="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 text-sm font-bold px-4 py-2 rounded-xl transition">
+                <i class="fa-solid fa-xmark mr-1"></i> Close (Esc)
+            </button>
+        </div>
+
+        <div id="modalResultGrid" class="max-w-6xl mx-auto w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <!-- Populated dynamically for classroom TV display -->
+        </div>
+    </div>
+
+    <!-- Toast Notification Box -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-4 py-3 rounded-2xl shadow-xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 text-xs font-bold flex items-center gap-2 border border-slate-700">
+        <i class="fa-solid fa-circle-info text-emerald-400 text-base" id="toastIcon"></i>
+        <span id="toastMsg">Notification message</span>
+    </div>
+
+    <script>
+        // Application State Variables
+        let studentList = [];       // Raw loaded student objects
+        let resultList = [];        // Shuffled result objects with assigned presentation order
+        let soundEnabled = true;    // Audio mute state
+        let currentPickIndex = 0;   // Sequential pick tracker
+        let isSequentialActive = false;
+
+        // Cute English Topic/Badge Decorations for high school theme
+        const cuteBadges = [
+            { icon: "🇬🇧", title: "English Master", color: "bg-blue-100 text-blue-800 border-blue-200" },
+            { icon: "⭐", title: "Star Speaker", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+            { icon: "📚", title: "Passionate", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+            { icon: "🎯", title: "Point Clear", color: "bg-rose-100 text-rose-800 border-rose-200" },
+            { icon: "💡", title: "Creative Mind", color: "bg-purple-100 text-purple-800 border-purple-200" },
+            { icon: "🎈", title: "Confident", color: "bg-indigo-100 text-indigo-800 border-indigo-200" }
+        ];
+
+        // Web Audio API Sound Synthesizer
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                const now = audioCtx.currentTime;
+
+                if (type === 'tick') {
+                    // Mechanical slot tick sound
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(400 + Math.random() * 200, now);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                } else if (type === 'reveal') {
+                    // C Major chord on pick selection
+                    const freqs = [523.25, 659.25, 783.99, 1046.50];
+                    freqs.forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+                        gain.gain.setValueAtTime(0.12, now + idx * 0.06);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.3);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.06);
+                        osc.stop(now + idx * 0.06 + 0.3);
+                    });
+                } else if (type === 'finish') {
+                    // Celebration fanfare
+                    const melody = [440, 554.37, 659.25, 880];
+                    melody.forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                        gain.gain.setValueAtTime(0.15, now + idx * 0.1);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.4);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.1);
+                        osc.stop(now + idx * 0.1 + 0.4);
+                    });
+                }
+            } catch (e) {
+                console.log('Audio play error:', e);
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('soundIcon');
+            const text = document.getElementById('soundText');
+            if (soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high';
+                text.innerText = 'Mute';
+                showToast('🔊 Sound effects turned ON.');
+                playSound('tick');
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark';
+                text.innerText = 'Unmute';
+                showToast('🔇 Sound effects turned OFF.');
+            }
+        }
+
+        function playTestSound() {
+            initAudio();
+            playSound('reveal');
+        }
+
+        // Load default 25 sample English class students
+        function loadSampleData() {
+            const sampleNames = [
+                "1. Alex Kang", "2. Chloe Kim", "3. David Park", "4. Emma Lee", "5. Grace Yoon",
+                "6. Daniel Choi", "7. Hannah Jeong", "8. James Han", "9. Jessica Oh", "10. Justin Lim",
+                "11. Lily Song", "12. Michael Shin", "13. Olivia Yoo", "14. Ryan An", "15. Sophia Bae",
+                "16. Thomas Cho", "17. Victoria Kwon", "18. William Hwang", "19. Zoe Seo", "20. Noah Hong",
+                "21. Mia Moon", "22. Liam Yang", "23. Ella Go", "24. Mason Son", "25. Ava Noh"
+            ];
+
+            studentList = sampleNames.map((name, index) => ({
+                id: index + 1,
+                name: name.trim()
+            }));
+
+            document.getElementById('manualRosterInput').value = sampleNames.join('\n');
+            updateStudentCountUI();
+            showToast('🎉 Loaded 25 sample students for Grade 11 English Class!');
+        }
+
+        // Handle Excel / CSV File Upload
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                    const parsedNames = [];
+                    json.forEach(row => {
+                        if (row && row.length > 0) {
+                            const rowText = row.filter(cell => cell !== null && cell !== undefined && String(cell).trim() !== '').join(' ');
+                            if (rowText.trim().length > 0) {
+                                parsedNames.push(rowText.trim());
+                            }
+                        }
+                    });
+
+                    if (parsedNames.length === 0) {
+                        showToast('⚠️ Could not find any readable names in the Excel file.');
+                        return;
+                    }
+
+                    studentList = parsedNames.map((name, idx) => ({
+                        id: idx + 1,
+                        name: name
+                    }));
+
+                    document.getElementById('manualRosterInput').value = parsedNames.join('\n');
+                    updateStudentCountUI();
+                    showToast(`📄 Imported ${studentList.length} students from Excel!`);
+                } catch (err) {
+                    console.error(err);
+                    showToast('❌ Error reading the Excel file.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Apply Manual Textarea Roster Input
+        function applyManualRoster() {
+            const rawText = document.getElementById('manualRosterInput').value;
+            const lines = rawText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+            if (lines.length === 0) {
+                showToast('⚠️ Please enter at least 1 student name.');
+                return;
+            }
+
+            studentList = lines.map((name, index) => ({
+                id: index + 1,
+                name: name
+            }));
+
+            updateStudentCountUI();
+            showToast(`✅ Applied roster with ${studentList.length} students.`);
+        }
+
+        function clearRoster() {
+            studentList = [];
+            resultList = [];
+            document.getElementById('manualRosterInput').value = '';
+            document.getElementById('excelFile').value = '';
+            updateStudentCountUI();
+            renderResultCards();
+            showToast('🗑️ Roster has been reset.');
+        }
+
+        function updateStudentCountUI() {
+            document.getElementById('studentCount').innerText = studentList.length;
+        }
+
+        // Fisher-Yates Shuffle Algorithm
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // Start Full Immediate Shuffle
+        function startFullShuffle() {
+            if (studentList.length === 0) {
+                showToast('⚠️ Please upload or enter a student roster first!');
+                return;
+            }
+
+            stopSequentialPick();
+
+            const shuffled = shuffleArray(studentList);
+            const groupSize = parseInt(document.getElementById('splitGroupSize').value) || 0;
+
+            resultList = shuffled.map((student, index) => {
+                const rank = index + 1;
+                const badge = cuteBadges[index % cuteBadges.length];
+                let dayGroup = "";
+
+                if (groupSize > 0) {
+                    const dayNum = Math.ceil(rank / groupSize);
+                    dayGroup = `Day ${dayNum} Presentation`;
+                }
+
+                return {
+                    order: rank,
+                    name: student.name,
+                    badge: badge,
+                    dayGroup: dayGroup
+                };
+            });
+
+            renderResultCards();
+            playSound('finish');
+            triggerConfetti();
+            showToast(`✨ Random presentation order created for ${resultList.length} students!`);
+        }
+
+        // Start Sequential One-by-One Pick Mode
+        function startSequentialPick() {
+            if (studentList.length === 0) {
+                showToast('⚠️ Please upload or enter a student roster first!');
+                return;
+            }
+
+            const shuffled = shuffleArray(studentList);
+            const groupSize = parseInt(document.getElementById('splitGroupSize').value) || 0;
+
+            resultList = shuffled.map((student, index) => {
+                const rank = index + 1;
+                const badge = cuteBadges[index % cuteBadges.length];
+                let dayGroup = "";
+
+                if (groupSize > 0) {
+                    const dayNum = Math.ceil(rank / groupSize);
+                    dayGroup = `Day ${dayNum} Presentation`;
+                }
+
+                return {
+                    order: rank,
+                    name: student.name,
+                    badge: badge,
+                    dayGroup: dayGroup
+                };
+            });
+
+            currentPickIndex = 0;
+            isSequentialActive = true;
+            document.getElementById('drawStageArea').classList.remove('hidden');
+            renderResultCards(0);
+
+            updateDrawStageUI();
+        }
+
+        function stopSequentialPick() {
+            isSequentialActive = false;
+            document.getElementById('drawStageArea').classList.add('hidden');
+        }
+
+        function updateDrawStageUI() {
+            if (currentPickIndex >= resultList.length) {
+                document.getElementById('drawStageTitle').innerText = "🎉 All presentation picks completed!";
+                document.getElementById('slotDisplayText').innerText = "COMPLETE!";
+                document.getElementById('drawNextPickBtn').disabled = true;
+                document.getElementById('drawNextPickBtn').classList.add('opacity-50', 'cursor-not-allowed');
+                playSound('finish');
+                triggerConfetti();
+                return;
+            }
+
+            const currentOrder = currentPickIndex + 1;
+            document.getElementById('drawStageTitle').innerText = `Drawing Presenter #${currentOrder}...`;
+            document.getElementById('slotDisplayText').innerText = "??";
+            document.getElementById('drawNextPickBtn').disabled = false;
+            document.getElementById('drawNextPickBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        function drawNextStudent() {
+            if (currentPickIndex >= resultList.length) return;
+
+            const targetStudent = resultList[currentPickIndex];
+            const slotText = document.getElementById('slotDisplayText');
+            const nextBtn = document.getElementById('drawNextPickBtn');
+            nextBtn.disabled = true;
+
+            let rollCounter = 0;
+            const totalRolls = 20;
+
+            // Fast slot rolling animation effect
+            const rollInterval = setInterval(() => {
+                rollCounter++;
+                const randomSample = studentList[Math.floor(Math.random() * studentList.length)];
+                slotText.innerText = randomSample.name;
+                playSound('tick');
+
+                if (rollCounter >= totalRolls) {
+                    clearInterval(rollInterval);
+                    // Final reveal
+                    slotText.innerText = `#${targetStudent.order}: ${targetStudent.name}`;
+                    playSound('reveal');
+                    
+                    currentPickIndex++;
+                    renderResultCards(currentPickIndex);
+                    
+                    setTimeout(() => {
+                        updateDrawStageUI();
+                    }, 500);
+                }
+            }, 80);
+        }
+
+        // Render Cards in Main Grid and Modal View
+        function renderResultCards(visibleCount = resultList.length) {
+            const grid = document.getElementById('resultGrid');
+            const notice = document.getElementById('emptyResultNotice');
+
+            if (resultList.length === 0 || visibleCount === 0) {
+                grid.classList.add('hidden');
+                notice.classList.remove('hidden');
+                grid.innerHTML = '';
+                return;
+            }
+
+            notice.classList.add('hidden');
+            grid.classList.remove('hidden');
+            grid.innerHTML = '';
+
+            const itemsToDisplay = resultList.slice(0, visibleCount);
+
+            itemsToDisplay.forEach((item) => {
+                const card = document.createElement('div');
+                card.className = `glass-panel p-4 rounded-2xl border-2 shadow-sm card-bounce flex items-center justify-between relative overflow-hidden bg-white/90`;
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-emerald-500 text-white font-bold text-lg flex items-center justify-center shadow-md">
+                            ${item.order}
+                        </div>
+                        <div>
+                            <div class="font-bold text-base sm:text-lg text-slate-800">${item.name}</div>
+                            <div class="flex items-center gap-1.5 mt-0.5">
+                                <span class="text-[10px] px-2 py-0.5 rounded-full border ${item.badge.color} font-bold flex items-center gap-1">
+                                    <span>${item.badge.icon}</span> ${item.badge.title}
+                                </span>
+                                ${item.dayGroup ? `<span class="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded-md font-bold">${item.dayGroup}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-xs font-bold text-slate-300">#${item.order}</div>
+                `;
+                grid.appendChild(card);
+            });
+
+            renderModalGrid(itemsToDisplay);
+        }
+
+        function renderModalGrid(items) {
+            const modalGrid = document.getElementById('modalResultGrid');
+            modalGrid.innerHTML = '';
+
+            items.forEach((item) => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-800/90 border-2 border-slate-700 p-4 rounded-2xl text-center shadow-lg hover:border-emerald-400 transition";
+                card.innerHTML = `
+                    <div class="inline-flex w-12 h-12 rounded-2xl bg-emerald-500 text-white font-bold text-2xl items-center justify-center mb-2 shadow-md">
+                        ${item.order}
+                    </div>
+                    <div class="font-bold text-xl text-white mb-1">${item.name}</div>
+                    <div class="text-xs text-emerald-400 font-bold">${item.dayGroup ? item.dayGroup : item.badge.title}</div>
+                `;
+                modalGrid.appendChild(card);
+            });
+        }
+
+        // Toggle Classroom Presentation Full Screen Modal
+        function toggleClassroomMode() {
+            if (resultList.length === 0) {
+                showToast('⚠️ Please draw a presentation order first.');
+                return;
+            }
+            const modal = document.getElementById('classroomModal');
+            modal.classList.toggle('hidden');
+            modal.classList.toggle('flex');
+        }
+
+        // Close Modal on Esc key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('classroomModal');
+                if (!modal.classList.contains('hidden')) {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                }
+            }
+        });
+
+        // Export Results to Excel (.xlsx) File
+        function exportToExcel() {
+            if (resultList.length === 0) {
+                showToast('⚠️ No presentation results available to export.');
+                return;
+            }
+
+            const exportData = resultList.map(item => ({
+                "Presentation Order": item.order,
+                "Student Name": item.name,
+                "Presentation Schedule": item.dayGroup || "Day 1 Presentation",
+                "Badge / Note": item.badge.title
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "English Presentation Order");
+
+            worksheet['!cols'] = [{ wch: 18 }, { wch: 22 }, { wch: 25 }, { wch: 20 }];
+
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+            XLSX.writeFile(workbook, `English_Presentation_Order_${dateStr}.xlsx`);
+
+            showToast('📥 Excel file download started!');
+        }
+
+        // Confetti Particle Burst
+        function triggerConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+
+        // Toast Notification System
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            toastMsg.innerText = message;
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Page Load Initializer
+        window.onload = function() {
+            loadSampleData();
+        };
+    </script>
+</body>
+</html>
